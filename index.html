@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>EG_Chat</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#202c33">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{background:#111b21;color:#e9edef;height:100dvh;display:flex;justify-content:center;overflow:hidden}
+.app{width:100%;max-width:480px;height:100dvh;position:relative;overflow:hidden;background:#111b21}
+.screen,.chat-room{display:none;flex-direction:column;position:absolute;inset:0;background:#111b21}
+.screen.active,.chat-room.active{display:flex}
+.chat-room{background:#0b141a;z-index:20}
+.login-box{padding:30px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center}
+.wa{font-size:60px;color:#25d366;margin-bottom:16px}
+.sub{font-size:14px;color:#8696a0;margin:8px 0 24px}
+input{width:100%;padding:13px;background:#202c33;border:1px solid #2a3942;border-radius:8px;color:#e9edef;font-size:15px;outline:none;margin-bottom:12px}
+input:focus{border-color:#00a884}
+.btn{width:100%;padding:13px;background:#00a884;color:#111b21;border:0;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer;margin-bottom:8px}
+.btn.ghost{background:transparent;color:#00a884;border:1px solid #00a884}
+.err{color:#f15c6d;font-size:13px;min-height:18px;margin-top:6px}
+.hdr{background:#202c33;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;color:#8696a0}
+.hdr .t{font-size:20px;font-weight:bold;color:#e9edef}
+.hdr .ic{display:flex;gap:20px;font-size:18px;cursor:pointer}
+.badge-bar{padding:6px 16px;font-size:12px;color:#00a884;border-bottom:1px solid #222d34}
+#search{display:none;margin:8px 12px;width:calc(100% - 24px)}
+.chats{flex:1;overflow-y:auto}
+.chat-item{display:flex;align-items:center;padding:12px 16px;gap:14px;cursor:pointer;border-bottom:1px solid #1f2c33}
+.chat-item:hover{background:#202c33}
+.avatar{width:48px;height:48px;border-radius:50%;background:#6b7c85;display:flex;justify-content:center;align-items:center;font-size:20px;flex-shrink:0}
+.chat-info{flex:1;overflow:hidden}
+.chat-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;gap:8px}
+.chat-name{font-size:16px}
+.chat-time{font-size:12px;color:#8696a0}.chat-time.on{color:#00a884}
+.last-msg{font-size:14px;color:#8696a0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{background:#00a884;color:#111b21;border-radius:12px;min-width:20px;height:20px;padding:0 6px;font-size:12px;font-weight:bold;display:flex;align-items:center;justify-content:center}
+.fab{position:absolute;bottom:20px;left:20px;width:55px;height:55px;background:#00a884;border-radius:16px;display:flex;justify-content:center;align-items:center;font-size:22px;color:#111b21;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.4)}
+.modal{display:none;position:absolute;inset:0;background:rgba(0,0,0,.7);z-index:100;justify-content:center;align-items:center;padding:20px}
+.modal>div{background:#202c33;border-radius:12px;padding:20px;width:100%;max-width:340px;text-align:center}
+.back{font-size:18px;color:#8696a0;cursor:pointer;padding:5px}
+.chat-hdr{background:#202c33;padding:10px 12px;display:flex;align-items:center;gap:10px}
+.chat-body{flex:1;padding:12px;overflow-y:auto;background-image:radial-gradient(#1f2c34 1px,transparent 0);background-size:16px 16px;display:flex;flex-direction:column;gap:6px}
+.day{align-self:center;background:#182229;color:#8696a0;font-size:12px;padding:3px 10px;border-radius:8px;margin:6px 0}
+.bubble{max-width:78%;padding:7px 10px;border-radius:8px;font-size:14.5px;line-height:1.4;word-break:break-word;cursor:pointer}
+.bubble.me{background:#005c4b;align-self:flex-start}
+.bubble.other{background:#202c33;align-self:flex-end}
+.bubble img{max-width:100%;border-radius:6px;display:block;margin-bottom:4px}
+.sender{font-size:11px;font-weight:bold;color:#00a884;margin-bottom:2px}
+.quote{background:rgba(0,0,0,.25);border-right:3px solid #00a884;padding:4px 8px;border-radius:4px;font-size:12px;margin-bottom:4px;color:#aebac1}
+.del{color:#8696a0;font-size:13px}
+.time{font-size:10px;color:rgba(241,241,241,.6);display:block;margin-top:3px;text-align:left}
+.time.read{color:#53bdeb}
+.menu{display:none;position:absolute;background:#233138;border-radius:8px;z-index:50;min-width:130px;box-shadow:0 4px 14px rgba(0,0,0,.5);overflow:hidden}
+.menu div{padding:11px 16px;font-size:14px;cursor:pointer}.menu div:hover{background:#2a3942}
+.reply-bar{display:none;background:#1a252b;padding:6px 12px;align-items:center;gap:10px;font-size:13px;color:#aebac1;border-right:3px solid #00a884}
+.reply-bar span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.emojis{display:none;flex-wrap:wrap;gap:4px;background:#202c33;padding:8px;font-size:24px;border-top:1px solid #2a3942}
+.emojis span{cursor:pointer;padding:2px 4px}
+.foot{background:#202c33;padding:8px 10px;display:flex;align-items:center;gap:10px;color:#8696a0;font-size:20px}
+.foot input{margin:0;flex:1;background:#2a3942;border:0;padding:10px 14px}
+.foot i{cursor:pointer}
+.send{width:42px;height:42px;background:#00a884;border-radius:50%;display:flex;justify-content:center;align-items:center;color:#111b21!important;font-size:16px!important;flex-shrink:0}
+.set{padding:16px;overflow-y:auto;flex:1}.set h4{color:#00a884;margin:18px 0 8px;font-size:14px}
+.row{background:#202c33;padding:14px;border-radius:8px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.row.on{border:1px solid #00a884}.danger{color:#f15c6d}.rec{color:#f15c6d!important}audio{max-width:100%;height:36px;display:block}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- تسجيل الدخول / إنشاء حساب -->
+  <div class="screen active" id="login-screen">
+    <div class="login-box">
+      <i class="fa-brands fa-whatsapp wa"></i>
+      <h1 style="font-size:22px">أهلاً بك في EG_Chat</h1>
+      <p class="sub">سجّل دخولك أو أنشئ حساب جديد</p>
+      <input id="username" placeholder="اسم المستخدم (إنجليزي / أرقام)" autocapitalize="none" autocomplete="username">
+      <input id="password" type="password" placeholder="كلمة المرور (6 حروف على الأقل)" autocomplete="current-password">
+      <button class="btn" id="btn-login">دخول</button>
+      <button class="btn ghost" id="btn-register">إنشاء حساب جديد</button>
+      <p class="err" id="login-err"></p>
+    </div>
+  </div>
+
+  <!-- الرئيسية -->
+  <div class="screen" id="main-screen">
+    <div class="hdr">
+      <div class="t">EG_Chat</div>
+      <div class="ic"><i class="fa-solid fa-magnifying-glass" id="btn-search"></i><i class="fa-solid fa-gear" id="btn-settings"></i></div>
+    </div>
+    <div class="badge-bar" id="me-badge"></div>
+    <input id="search" placeholder="بحث في المحادثات...">
+    <div class="chats" id="chats"></div>
+    <div class="fab" id="btn-add"><i class="fa-solid fa-user-plus"></i></div>
+  </div>
+
+  <div class="screen" id="settings-screen" style="z-index:30">
+    <div class="hdr"><i class="fa-solid fa-arrow-right back" id="set-back"></i><div class="t">الإعدادات</div><span></span></div>
+    <div class="set">
+      <h4>الحساب</h4>
+      <div class="row" id="s-name"><span>الاسم الظاهر</span><b id="s-name-v"></b></div>
+      <h4>أخرى</h4>
+      <div class="row" id="s-out"><span>تسجيل الخروج</span></div>
+      <div class="row danger" id="s-del"><span>حذف حسابي</span></div>
+      <p class="sub" style="text-align:center">EG_Chat</p>
+    </div>
+  </div>
+
+  <!-- إضافة جهة اتصال -->
+  <div class="modal" id="add-modal">
+    <div>
+      <h3 style="margin-bottom:12px">إضافة جهة اتصال</h3>
+      <p class="sub" style="margin:0 0 14px">اكتب يوزر الشخص المسجّل في التطبيق:</p>
+      <input id="target" placeholder="اليوزر نيم..." autocapitalize="none">
+      <button class="btn" id="btn-save">إضافة ومراسلة</button>
+      <button class="btn ghost" style="border:0;color:#8696a0" id="btn-cancel">إلغاء</button>
+    </div>
+  </div>
+
+  <!-- المحادثة -->
+  <div class="chat-room" id="chat-room">
+    <div class="chat-hdr">
+      <i class="fa-solid fa-arrow-right back" id="btn-back"></i>
+      <div class="avatar" id="c-av" style="width:38px;height:38px;font-size:16px"></div>
+      <div style="flex:1">
+        <div id="c-name" style="font-size:16px;font-weight:bold"></div>
+        <div id="c-status" style="font-size:11px;color:#8696a0"></div>
+      </div>
+    </div>
+    <div class="chat-body" id="chat-body"></div>
+    <div class="reply-bar" id="reply-bar"><span id="reply-txt"></span><i class="fa-solid fa-xmark" id="reply-x" style="cursor:pointer"></i></div>
+    <div class="emojis" id="emojis"></div>
+    <div class="foot">
+      <i class="fa-regular fa-face-smile" id="btn-emoji"></i>
+      <i class="fa-solid fa-paperclip" id="btn-attach"></i>
+      <input type="file" id="file" accept="image/*" hidden>
+      <i class="fa-solid fa-camera" id="btn-cam"></i><input type="file" id="cam" accept="image/*" capture="environment" hidden>
+      <input id="msg-input" placeholder="مراسلة..." autocomplete="off">
+      <i class="fa-solid fa-microphone" id="btn-mic"></i>
+      <i class="fa-solid fa-paper-plane send" id="btn-send"></i>
+    </div>
+    <div class="menu" id="menu"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, deleteUser } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, limit, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyA8f1pFJJHWYcoRXPehJcNVu0j1G7disEw",
+  authDomain: "mychat-3ccaf.firebaseapp.com",
+  projectId: "mychat-3ccaf",
+  storageBucket: "mychat-3ccaf.firebasestorage.app",
+  messagingSenderId: "839881581926",
+  appId: "1:839881581926:web:a5b72490f60654ed3614a7"
+});
+const auth = getAuth(app), db = getFirestore(app);
+
+const $ = id => document.getElementById(id);
+const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+const fmt = t => new Date(t).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+const cid = (a, b) => [a, b].sort().join('|');
+const mail = u => u + '@mychat.app';
+const show = id => { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id)); };
+
+let me = '', chats = {}, cur = null, replyTo = null, hb = null;
+let unU = null, U = {}, unList = null, unMsgs = null, unPeer = null;
+
+/* ---------- الحسابات ---------- */
+const errs = {
+  'auth/invalid-credential': 'اليوزر أو الباسورد غلط',
+  'auth/email-already-in-use': 'اليوزر ده موجود قبل كده',
+  'auth/weak-password': 'الباسورد لازم 6 حروف على الأقل',
+  'auth/operation-not-allowed': 'فعّل Email/Password من Firebase → Authentication',
+  'auth/network-request-failed': 'مشكلة في الإنترنت'
+};
+async function doAuth(reg) {
+  const u = $('username').value.trim().toLowerCase(), p = $('password').value;
+  const er = $('login-err'); er.textContent = '';
+  if (!/^[a-z0-9_]{3,20}$/.test(u)) { er.textContent = 'اليوزر: إنجليزي وأرقام و _ فقط (3 إلى 20)'; return; }
+  try {
+    if (reg) { await createUserWithEmailAndPassword(auth, mail(u), p); await setDoc(doc(db, 'users', u), { name: u, lastSeen: Date.now() }); }
+    else await signInWithEmailAndPassword(auth, mail(u), p);
+  } catch (e) { er.textContent = (errs[e.code] || '') + ' [' + (e.code || e.message) + ']'; }
+}
+$('btn-login').onclick = () => doAuth(false);
+$('btn-register').onclick = () => doAuth(true);
+
+onAuthStateChanged(auth, u => {
+  unU && unU(); unList && unList(); clearInterval(hb); closeChat();
+  if (!u) { chats = {}; U = {}; show('login-screen'); return; }
+  me = u.email.split('@')[0];
+  $('me-badge').textContent = 'حسابي: ' + me;
+  show('main-screen');
+  const beat = () => setDoc(doc(db, 'users', me), { name: me, lastSeen: Date.now() }, { merge: true }).catch(() => {});
+  beat(); hb = setInterval(beat, 25000);
+  unU = onSnapshot(collection(db, 'users'), s => { U = {}; s.forEach(d => U[d.id] = d.data()); renderList(); paint(); });
+  unList = onSnapshot(query(collection(db, 'chats'), where('members', 'array-contains', me)), s => {
+    chats = {}; s.forEach(d => chats[d.id] = { id: d.id, ...d.data() });
+    renderList();
+    if (cur && !cur.pub) clearUnread();
+  });
+});
+
+const dn = u => (U[u] && U[u].dn) || u;
+function paint() {
+  if (!cur || cur.pub) return;
+  const p = U[cur.name] || {}, a = p.act;
+  $('c-status').textContent = a && a.chat === cur.id && Date.now() - a.t < 4000 ? (a.k === 'r' ? '🎤 يسجّل رسالة صوتية...' : '✍️ يكتب...')
+    : (Date.now() - (p.lastSeen || 0) < 60000 ? 'متصل الآن' : (p.lastSeen ? 'آخر ظهور ' + fmt(p.lastSeen) : ''));
+}
+setInterval(paint, 2000);
+let lastAct = 0;
+const act = k => { if (!cur || cur.pub) return; const n = Date.now(); if (k === 't' && n - lastAct < 2500) return; lastAct = n; setDoc(doc(db, 'users', me), { act: { chat: cur.id, k, t: n } }, { merge: true }).catch(() => {}); };
+
+/* ---------- قائمة المحادثات ---------- */
+function renderList() {
+  const box = $('chats'), f = $('search').value.trim().toLowerCase();
+  box.textContent = '';
+  const items = [{ id: 'public', name: 'الدردشة العامة', last: 'غرفة الدردشة الجماعية', pub: 1, n: 0 }];
+  Object.values(chats).sort((a, b) => (b.lastTs || 0) - (a.lastTs || 0)).forEach(c => {
+    const o = c.members.find(m => m !== me) || me; items.push({ id: c.id, name: o, title: dn(o), last: c.lastMsg || 'ابدأ المحادثة', ts: c.lastTs, n: (c.unread || {})[me] || 0 });
+  });
+  items.filter(i => !f || (i.title || i.name).toLowerCase().includes(f)).forEach(i => {
+    const r = el('div', 'chat-item'), av = el('div', 'avatar');
+    if (i.pub) { av.style.background = '#00a884'; av.innerHTML = '<i class="fa-solid fa-users"></i>'; }
+    else av.textContent = (i.title || i.name)[0].toUpperCase();
+    const info = el('div', 'chat-info'), top = el('div', 'chat-top'), bot = el('div', 'chat-top');
+    top.append(el('span', 'chat-name', i.title || i.name), el('span', 'chat-time' + (i.n ? ' on' : ''), i.ts ? fmt(i.ts) : ''));
+    bot.append(el('div', 'last-msg', i.last));
+    if (i.n) bot.append(el('span', 'badge', i.n));
+    info.append(top, bot); r.append(av, info);
+    r.onclick = () => openChat(i);
+    box.append(r);
+  });
+}
+$('search').oninput = renderList;
+$('btn-search').onclick = () => { const s = $('search'); s.style.display = s.style.display === 'block' ? 'none' : 'block'; if (s.style.display === 'none') { s.value = ''; renderList(); } else s.focus(); };
+
+/* ---------- إضافة جهة اتصال ---------- */
+$('btn-add').onclick = () => $('add-modal').style.display = 'flex';
+$('btn-cancel').onclick = () => $('add-modal').style.display = 'none';
+$('btn-save').onclick = async () => {
+  const t = $('target').value.trim().toLowerCase();
+  if (!t || t === me) return alert('اكتب يوزر تاني صحيح');
+  try {
+    const s = await getDoc(doc(db, 'users', t));
+    if (!s.exists()) return alert('اليوزر ده مش مسجّل في التطبيق');
+    const id = cid(me, t);
+    await setDoc(doc(db, 'chats', id), { members: [me, t].sort() }, { merge: true });
+    $('add-modal').style.display = 'none'; $('target').value = '';
+    openChat({ id, name: t });
+  } catch (e) { alert('حصل خطأ: ' + e.code); }
+};
+
+/* ---------- المحادثة ---------- */
+function openChat(i) {
+  closeChat(); cur = i; replyTo = null; $('reply-bar').style.display = 'none';
+  $('c-name').textContent = i.title || dn(i.name);
+  $('c-av').textContent = i.pub ? 'G' : i.name[0].toUpperCase();
+  $('c-status').textContent = i.pub ? 'غرفة عامة' : '';
+  $('chat-room').classList.add('active');
+  paint();
+  unMsgs = onSnapshot(query(collection(db, 'chats', i.id, 'messages'), orderBy('ts', 'desc'), limit(100)), s => {
+    const arr = []; s.forEach(d => arr.push({ id: d.id, ...d.data() }));
+    renderMsgs(arr.reverse());
+  });
+  clearUnread();
+}
+function closeChat() {
+  unMsgs && unMsgs(); unPeer && unPeer(); unMsgs = unPeer = null; cur = null;
+  $('chat-room').classList.remove('active'); $('emojis').style.display = 'none';
+}
+$('btn-back').onclick = closeChat;
+
+function clearUnread() {
+  if (cur && !cur.pub && ((chats[cur.id] || {}).unread || {})[me])
+    updateDoc(doc(db, 'chats', cur.id), { ['unread.' + me]: 0 }).catch(() => {});
+}
+
+function renderMsgs(arr) {
+  const b = $('chat-body'); b.textContent = '';
+  let day = '', hasNew = false;
+  arr.forEach(m => {
+    const d = new Date(m.ts).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' });
+    if (d !== day) { day = d; b.append(el('div', 'day', d)); }
+    const mine = m.from === me;
+    if (!mine && !cur.pub && !m.read && !m.del) {
+      updateDoc(doc(db, 'chats', cur.id, 'messages', m.id), { read: true }).catch(() => {}); hasNew = true;
+    }
+    const bub = el('div', 'bubble ' + (mine ? 'me' : 'other'));
+    if (!mine && cur.pub) bub.append(el('div', 'sender', dn(m.from)));
+    if (m.reply) { const q = el('div', 'quote'); q.append(el('b', '', m.reply.name), el('div', '', m.reply.text)); bub.append(q); }
+    if (m.del) bub.append(el('i', 'del', '🚫 تم حذف هذه الرسالة'));
+    else {
+      if (m.img) { const im = el('img'); im.src = m.img; im.onclick = e => { e.stopPropagation(); window.open(m.img); }; bub.append(im); }
+      if (m.aud) { const a = el('audio'); a.controls = true; a.src = m.aud; a.onclick = e => e.stopPropagation(); bub.append(a); }
+      if (m.text) bub.append(el('div', '', m.text));
+    }
+    const tick = mine && !cur.pub && !m.del ? (m.read ? ' ✓✓' : ' ✓') : '';
+    bub.append(el('span', 'time' + (m.read && tick ? ' read' : ''), fmt(m.ts) + tick));
+    if (!m.del) bub.onclick = e => showMenu(e, m, mine);
+    b.append(bub);
+  });
+  b.scrollTop = b.scrollHeight;
+  if (hasNew) clearUnread();
+}
+
+/* قائمة الرسالة: رد / نسخ / حذف */
+function showMenu(e, m, mine) {
+  e.stopPropagation();
+  const M = $('menu'); M.textContent = '';
+  const add = (t, f) => { const x = el('div', '', t); x.onclick = () => { M.style.display = 'none'; f(); }; M.append(x); };
+  add('رد', () => {
+    replyTo = { name: m.from, text: m.text ? m.text.slice(0, 60) : (m.aud ? '🎤 صوت' : '📷 صورة') };
+    $('reply-txt').textContent = replyTo.name + ': ' + replyTo.text;
+    $('reply-bar').style.display = 'flex'; $('msg-input').focus();
+  });
+  if (m.text) add('نسخ', () => navigator.clipboard && navigator.clipboard.writeText(m.text));
+  if (mine) add('حذف للجميع', () => updateDoc(doc(db, 'chats', cur.id, 'messages', m.id), { del: true, text: '', img: null, aud: null }));
+  M.style.display = 'block';
+  const r = $('chat-room').getBoundingClientRect();
+  M.style.top = Math.min(e.clientY - r.top, r.height - 150) + 'px';
+  M.style.left = Math.max(8, Math.min(e.clientX - r.left, r.width - 150)) + 'px';
+}
+document.addEventListener('click', () => $('menu').style.display = 'none');
+$('reply-x').onclick = () => { replyTo = null; $('reply-bar').style.display = 'none'; };
+
+/* ---------- الإرسال ---------- */
+async function send(text, img, aud) {
+  if (!text && !img && !aud) return;
+  const msg = { from: me, text, ts: Date.now(), read: false };
+  if (img) msg.img = img;
+  if (aud) msg.aud = aud;
+  if (replyTo) msg.reply = replyTo;
+  replyTo = null; $('reply-bar').style.display = 'none';
+  try {
+    if (!cur.pub) {
+      const o = cur.name;
+      await setDoc(doc(db, 'chats', cur.id), {
+        members: [me, o].sort(), lastMsg: text || (aud ? '🎤 رسالة صوتية' : '📷 صورة'), lastTs: msg.ts, lastFrom: me,
+        unread: { [o]: increment(1) }
+      }, { merge: true });
+    }
+    await addDoc(collection(db, 'chats', cur.id, 'messages'), msg);
+  } catch (e) { alert('فشل الإرسال: ' + e.code); }
+}
+const sendTxt = () => { const i = $('msg-input'), t = i.value.trim(); i.value = ''; send(t); };
+$('btn-send').onclick = sendTxt;
+$('msg-input').oninput = () => act('t');
+$('msg-input').onkeydown = e => { if (e.key === 'Enter') sendTxt(); };
+
+/* صور: تتضغط وتتخزن مع الرسالة */
+$('btn-attach').onclick = () => $('file').click();
+const pic = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, 800 / Math.max(im.width, im.height)), c = document.createElement('canvas');
+      c.width = im.width * k; c.height = im.height * k;
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      const t = $('msg-input').value.trim(); $('msg-input').value = '';
+      send(t, c.toDataURL('image/jpeg', .6));
+    };
+    im.src = r.result;
+  };
+  r.readAsDataURL(f); e.target.value = '';
+};
+$('file').onchange = pic; $('cam').onchange = pic;
+$('btn-cam').onclick = () => $('cam').click();
+
+/* إيموجي */
+'😀 😂 😍 😘 😎 🤔 😢 😡 👍 👎 🙏 👏 🔥 ❤️ 🎉 😴 🤣 😅 😉 🥰 💪 🙌 😭 ✅'.split(' ').forEach(x => {
+  const s = el('span', '', x); s.onclick = () => { $('msg-input').value += x; $('msg-input').focus(); }; $('emojis').append(s);
+});
+$('btn-emoji').onclick = () => { const p = $('emojis'); p.style.display = p.style.display === 'flex' ? 'none' : 'flex'; };
+
+/* رسالة صوتية: اضغط للتسجيل واضغط تاني للإرسال (حد أقصى دقيقة) */
+let mr = null, chunks = [], rtimer = null;
+$('btn-mic').onclick = async () => {
+  if (mr) { mr.stop(); return; }
+  try {
+    const st = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mr = new MediaRecorder(st, { audioBitsPerSecond: 24000 }); chunks = [];
+    mr.ondataavailable = e => chunks.push(e.data);
+    mr.onstop = () => {
+      clearInterval(rtimer); st.getTracks().forEach(t => t.stop()); $('btn-mic').classList.remove('rec');
+      const type = mr.mimeType || 'audio/webm'; mr = null;
+      const r = new FileReader(); r.onload = () => send('', null, r.result); r.readAsDataURL(new Blob(chunks, { type }));
+    };
+    mr.start(); $('btn-mic').classList.add('rec'); act('r'); rtimer = setInterval(() => act('r'), 2500);
+    setTimeout(() => mr && mr.stop(), 60000);
+  } catch (e) { alert('مش قادر أفتح الميكروفون، اسمح بالصلاحية'); }
+};
+
+/* الإعدادات */
+$('btn-settings').onclick = () => { $('s-name-v').textContent = dn(me); show('settings-screen'); };
+$('set-back').onclick = () => show('main-screen');
+$('s-name').onclick = async () => {
+  const n = prompt('الاسم الجديد', dn(me));
+  if (n && n.trim()) { await setDoc(doc(db, 'users', me), { dn: n.trim().slice(0, 30) }, { merge: true }); $('s-name-v').textContent = n.trim(); }
+};
+$('s-out').onclick = () => { if (confirm('تسجيل الخروج؟')) signOut(auth); };
+$('s-del').onclick = async () => {
+  if (!confirm('حذف حسابك نهائياً؟')) return;
+  try { await deleteDoc(doc(db, 'users', me)); await deleteUser(auth.currentUser); }
+  catch (e) { alert(e.code === 'auth/requires-recent-login' ? 'سجّل خروج وادخل تاني وبعدين حاول' : 'خطأ: ' + e.code); }
+};
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

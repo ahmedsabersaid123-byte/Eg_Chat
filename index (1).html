@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>EG_Chat</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#202c33">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+body{background:#111b21;color:#e9edef;height:100dvh;display:flex;justify-content:center;overflow:hidden}
+.app{width:100%;max-width:480px;height:100dvh;position:relative;overflow:hidden;background:#111b21}
+.screen,.chat-room{display:none;flex-direction:column;position:absolute;inset:0;background:#111b21}
+.screen.active,.chat-room.active{display:flex}
+.chat-room{background:#0b141a;z-index:20}
+.login-box{padding:30px 20px;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center}
+.wa{font-size:60px;color:#25d366;margin-bottom:16px}
+.sub{font-size:14px;color:#8696a0;margin:8px 0 24px}
+input{width:100%;padding:13px;background:#202c33;border:1px solid #2a3942;border-radius:8px;color:#e9edef;font-size:15px;outline:none;margin-bottom:12px}
+input:focus{border-color:#00a884}
+.btn{width:100%;padding:13px;background:#00a884;color:#111b21;border:0;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer;margin-bottom:8px}
+.btn.ghost{background:transparent;color:#00a884;border:1px solid #00a884}
+.err{color:#f15c6d;font-size:13px;min-height:18px;margin-top:6px}
+.hdr{background:#202c33;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;color:#8696a0}
+.hdr .t{font-size:20px;font-weight:bold;color:#e9edef}
+.hdr .ic{display:flex;gap:20px;font-size:18px;cursor:pointer}
+.badge-bar{padding:6px 16px;font-size:12px;color:#00a884;border-bottom:1px solid #222d34}
+#search{display:none;margin:8px 12px;width:calc(100% - 24px)}
+.chats{flex:1;overflow-y:auto}
+.chat-item{display:flex;align-items:center;padding:12px 16px;gap:14px;cursor:pointer;border-bottom:1px solid #1f2c33}
+.chat-item:hover{background:#202c33}
+.avatar{width:48px;height:48px;border-radius:50%;background:#6b7c85;display:flex;justify-content:center;align-items:center;font-size:20px;flex-shrink:0}
+.chat-info{flex:1;overflow:hidden}
+.chat-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;gap:8px}
+.chat-name{font-size:16px}
+.chat-time{font-size:12px;color:#8696a0}.chat-time.on{color:#00a884}
+.last-msg{font-size:14px;color:#8696a0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{background:#00a884;color:#111b21;border-radius:12px;min-width:20px;height:20px;padding:0 6px;font-size:12px;font-weight:bold;display:flex;align-items:center;justify-content:center}
+.fab{position:absolute;bottom:20px;left:20px;width:55px;height:55px;background:#00a884;border-radius:16px;display:flex;justify-content:center;align-items:center;font-size:22px;color:#111b21;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.4)}
+.modal{display:none;position:absolute;inset:0;background:rgba(0,0,0,.7);z-index:100;justify-content:center;align-items:center;padding:20px}
+.modal>div{background:#202c33;border-radius:12px;padding:20px;width:100%;max-width:340px;text-align:center}
+.back{font-size:18px;color:#8696a0;cursor:pointer;padding:5px}
+.chat-hdr{background:#202c33;padding:10px 12px;display:flex;align-items:center;gap:10px}
+.chat-body{flex:1;padding:12px;overflow-y:auto;background-image:radial-gradient(#1f2c34 1px,transparent 0);background-size:16px 16px;display:flex;flex-direction:column;gap:6px}
+.day{align-self:center;background:#182229;color:#8696a0;font-size:12px;padding:3px 10px;border-radius:8px;margin:6px 0}
+.bubble{max-width:78%;padding:7px 10px;border-radius:8px;font-size:14.5px;line-height:1.4;word-break:break-word;cursor:pointer}
+.bubble.me{background:#005c4b;align-self:flex-start}
+.bubble.other{background:#202c33;align-self:flex-end}
+.bubble img{max-width:100%;border-radius:6px;display:block;margin-bottom:4px}
+.sender{font-size:11px;font-weight:bold;color:#00a884;margin-bottom:2px}
+.quote{background:rgba(0,0,0,.25);border-right:3px solid #00a884;padding:4px 8px;border-radius:4px;font-size:12px;margin-bottom:4px;color:#aebac1}
+.del{color:#8696a0;font-size:13px}
+.time{font-size:10px;color:rgba(241,241,241,.6);display:block;margin-top:3px;text-align:left}
+.time.read{color:#53bdeb}
+.menu{display:none;position:absolute;background:#233138;border-radius:8px;z-index:50;min-width:130px;box-shadow:0 4px 14px rgba(0,0,0,.5);overflow:hidden}
+.menu div{padding:11px 16px;font-size:14px;cursor:pointer}.menu div:hover{background:#2a3942}
+.reply-bar{display:none;background:#1a252b;padding:6px 12px;align-items:center;gap:10px;font-size:13px;color:#aebac1;border-right:3px solid #00a884}
+.reply-bar span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.emojis{display:none;flex-wrap:wrap;gap:4px;background:#202c33;padding:8px;font-size:24px;border-top:1px solid #2a3942}
+.emojis span{cursor:pointer;padding:2px 4px}
+.foot{background:#202c33;padding:8px 10px;display:flex;align-items:center;gap:10px;color:#8696a0;font-size:20px}
+.foot input{margin:0;flex:1;background:#2a3942;border:0;padding:10px 14px}
+.foot i{cursor:pointer}
+.send{width:42px;height:42px;background:#00a884;border-radius:50%;display:flex;justify-content:center;align-items:center;color:#111b21!important;font-size:16px!important;flex-shrink:0}
+.set{padding:16px;overflow-y:auto;flex:1}.set h4{color:#00a884;margin:18px 0 8px;font-size:14px}
+.row{background:#202c33;padding:14px;border-radius:8px;margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.row.on{border:1px solid #00a884}.danger{color:#f15c6d}.rec{color:#f15c6d!important}audio{max-width:100%;height:36px;display:block}
+.rx{display:flex;gap:2px;font-size:22px;padding:8px 10px;border-bottom:1px solid #2a3942}.rx span{cursor:pointer;padding:2px 4px}.rxs{font-size:13px;background:#182229;border-radius:10px;display:inline-block;padding:1px 6px;margin-top:3px}.menu{min-width:190px}
+.light .app{filter:invert(1) hue-rotate(180deg)}.light .avatar,.light img{filter:invert(1) hue-rotate(180deg)}body.light{background:#ddd}
+#st-view{position:absolute;inset:0;z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- تسجيل الدخول / إنشاء حساب -->
+  <div class="screen active" id="login-screen">
+    <div class="login-box">
+      <i class="fa-brands fa-whatsapp wa"></i>
+      <h1 style="font-size:22px">أهلاً بك في EG_Chat</h1>
+      <p class="sub">سجّل دخولك أو أنشئ حساب جديد</p>
+      <input id="username" placeholder="اسم المستخدم (إنجليزي / أرقام)" autocapitalize="none" autocomplete="username">
+      <input id="password" type="password" placeholder="كلمة المرور (6 حروف على الأقل)" autocomplete="current-password">
+      <button class="btn" id="btn-login">دخول</button>
+      <button class="btn ghost" id="btn-register">إنشاء حساب جديد</button>
+      <p class="err" id="login-err"></p>
+    </div>
+  </div>
+
+  <!-- الرئيسية -->
+  <div class="screen" id="main-screen">
+    <div class="hdr">
+      <div class="t">EG_Chat</div>
+      <div class="ic"><i class="fa-regular fa-circle-dot" id="btn-status"></i><i class="fa-solid fa-magnifying-glass" id="btn-search"></i><i class="fa-solid fa-gear" id="btn-settings"></i></div>
+    </div>
+    <div class="badge-bar" id="me-badge"></div>
+    <input id="search" placeholder="بحث في المحادثات...">
+    <div class="chats" id="chats"></div>
+    <div class="fab" id="btn-add"><i class="fa-solid fa-user-plus"></i></div>
+  </div>
+
+  <div class="screen" id="settings-screen" style="z-index:30">
+    <div class="hdr"><i class="fa-solid fa-arrow-right back" id="set-back"></i><div class="t">الإعدادات</div><span></span></div>
+    <div class="set">
+      <div style="text-align:center"><div class="avatar" id="s-av" style="width:90px;height:90px;font-size:36px;margin:0 auto 6px;cursor:pointer"></div><input type="file" id="pf" accept="image/*" hidden><small class="sub">اضغط على الصورة لتغييرها</small></div>
+      <h4>الحساب</h4>
+      <div class="row" id="s-about"><span>الحالة</span><b id="s-ab-v"></b></div>
+      <div class="row" id="s-theme"><span>☀️ الوضع الفاتح / الداكن</span></div>
+      <div class="row" id="s-wp"><span>🎨 خلفية المحادثة</span></div>
+      <div class="row" id="s-star"><span>⭐ الرسائل المميّزة</span></div>
+      <div class="row" id="s-notif"><span>🔔 تفعيل الإشعارات</span></div>
+      <div class="row" id="s-name"><span>الاسم الظاهر</span><b id="s-name-v"></b></div>
+      <h4>أخرى</h4>
+      <div class="row" id="s-out"><span>تسجيل الخروج</span></div>
+      <div class="row danger" id="s-del"><span>حذف حسابي</span></div>
+      <p class="sub" style="text-align:center">EG_Chat</p>
+    </div>
+  </div>
+
+  <!-- إضافة جهة اتصال -->
+  <div class="modal" id="add-modal">
+    <div>
+      <h3 style="margin-bottom:12px">إضافة جهة اتصال</h3>
+      <p class="sub" style="margin:0 0 14px">اكتب يوزر الشخص المسجّل في التطبيق:</p>
+      <input id="target" placeholder="اليوزر نيم..." autocapitalize="none">
+      <button class="btn" id="btn-save">إضافة ومراسلة</button>
+      <button class="btn ghost" id="btn-group">👥 مجموعة جديدة</button>
+      <button class="btn ghost" style="border:0;color:#8696a0" id="btn-cancel">إلغاء</button>
+    </div>
+  </div>
+
+  <!-- المحادثة -->
+  <div class="chat-room" id="chat-room">
+    <div class="chat-hdr">
+      <i class="fa-solid fa-arrow-right back" id="btn-back"></i>
+      <div class="avatar" id="c-av" style="width:38px;height:38px;font-size:16px"></div>
+      <div style="flex:1">
+        <div id="c-name" style="font-size:16px;font-weight:bold"></div>
+        <div id="c-status" style="font-size:11px;color:#8696a0"></div>
+      </div>
+      <i class="fa-solid fa-phone" id="btn-voice" style="cursor:pointer;color:#8696a0;padding:6px"></i><i class="fa-solid fa-video" id="btn-vid" style="cursor:pointer;color:#8696a0;padding:6px"></i>
+      <i class="fa-solid fa-ellipsis-vertical" id="btn-cm" style="cursor:pointer;color:#8696a0;padding:6px"></i>
+    </div>
+    <div class="reply-bar" id="pin-bar" style="border-color:#ffb300"></div>
+    <div class="chat-body" id="chat-body"></div>
+    <div class="reply-bar" id="reply-bar"><span id="reply-txt"></span><i class="fa-solid fa-xmark" id="reply-x" style="cursor:pointer"></i></div>
+    <div class="emojis" id="emojis"></div>
+    <div class="foot">
+      <i class="fa-regular fa-face-smile" id="btn-emoji"></i>
+      <i class="fa-solid fa-paperclip" id="btn-attach"></i>
+      <input type="file" id="file" accept="image/*" hidden>
+      <i class="fa-solid fa-camera" id="btn-cam"></i><input type="file" id="cam" accept="image/*" capture="environment" hidden><input type="file" id="docf" hidden>
+      <input id="msg-input" placeholder="مراسلة..." autocomplete="off">
+      <i class="fa-solid fa-microphone" id="btn-mic"></i>
+      <i class="fa-solid fa-paper-plane send" id="btn-send"></i>
+    </div>
+    <div class="menu" id="menu"></div>
+  </div>
+  <div class="screen" id="status-screen" style="z-index:30"><div class="hdr"><i class="fa-solid fa-arrow-right back" id="st-back"></i><div class="t">الحالات</div><span></span></div>
+    <div class="set"><div class="row" id="st-add"><span>➕ إضافة حالة (24 ساعة)</span></div><h4>الحالات الأخيرة</h4><div id="st-list"></div></div><input type="file" id="stf" accept="image/*" hidden></div>
+  <div id="st-view"></div>
+  <div id="call-view" style="display:none;position:absolute;inset:0;z-index:300;background:#0b141a;flex-direction:column;align-items:center;justify-content:center;gap:12px">
+    <div id="call-t" style="font-size:18px"></div>
+    <video id="call-rv" autoplay playsinline style="width:100%;max-height:60%;background:#000"></video>
+    <video id="call-lv" autoplay playsinline muted style="position:absolute;top:70px;left:12px;width:90px;border-radius:8px;display:none"></video>
+    <div style="display:flex;gap:10px"><button class="btn" id="call-acc" style="width:auto;padding:12px 18px;background:#25d366">✅ رد</button><button class="btn" id="call-mute" style="width:auto;padding:12px 18px">🎤</button><button class="btn" id="call-cam" style="width:auto;padding:12px 18px">📷</button><button class="btn" id="call-end" style="width:auto;padding:12px 18px;background:#f15c6d">📵</button></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, deleteUser } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, getDoc, addDoc, updateDoc, deleteDoc, deleteField, disableNetwork, enableNetwork, onSnapshot, query, where, orderBy, limit, increment } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyA8f1pFJJHWYcoRXPehJcNVu0j1G7disEw",
+  authDomain: "mychat-3ccaf.firebaseapp.com",
+  projectId: "mychat-3ccaf",
+  storageBucket: "mychat-3ccaf.firebasestorage.app",
+  messagingSenderId: "839881581926",
+  appId: "1:839881581926:web:a5b72490f60654ed3614a7"
+});
+const auth = getAuth(app), db = getFirestore(app);
+
+const $ = id => document.getElementById(id);
+const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+const fmt = t => new Date(t).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+const cid = (a, b) => [a, b].sort().join('|');
+const mail = u => u + '@mychat.app';
+const show = id => { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id)); };
+
+let me = '', chats = {}, cur = null, replyTo = null, hb = null;
+let unST = null, unRing = null, unU = null, U = {}, unList = null, unMsgs = null, unPeer = null;
+
+/* ---------- الحسابات ---------- */
+const errs = {
+  'auth/invalid-credential': 'اليوزر أو الباسورد غلط',
+  'auth/email-already-in-use': 'اليوزر ده موجود قبل كده',
+  'auth/weak-password': 'الباسورد لازم 6 حروف على الأقل',
+  'auth/operation-not-allowed': 'فعّل Email/Password من Firebase → Authentication',
+  'auth/network-request-failed': 'مشكلة في الإنترنت'
+};
+async function doAuth(reg) {
+  const u = $('username').value.trim().toLowerCase(), p = $('password').value;
+  const er = $('login-err'); er.textContent = '';
+  if (!/^[a-z0-9_]{3,20}$/.test(u)) { er.textContent = 'اليوزر: إنجليزي وأرقام و _ فقط (3 إلى 20)'; return; }
+  try {
+    if (reg) { await createUserWithEmailAndPassword(auth, mail(u), p); await setDoc(doc(db, 'users', u), { name: u, lastSeen: Date.now() }); }
+    else await signInWithEmailAndPassword(auth, mail(u), p);
+  } catch (e) { er.textContent = (errs[e.code] || '') + ' [' + (e.code || e.message) + ']'; }
+}
+$('btn-login').onclick = () => doAuth(false);
+$('btn-register').onclick = () => doAuth(true);
+
+onAuthStateChanged(auth, u => {
+  unST && unST(); unRing && unRing(); unU && unU(); unList && unList(); clearInterval(hb); closeChat();
+  if (!u) { chats = {}; U = {}; show('login-screen'); return; }
+  me = u.email.split('@')[0];
+  $('me-badge').textContent = 'حسابي: ' + me;
+  show('main-screen');
+  const beat = () => setDoc(doc(db, 'users', me), { name: me, lastSeen: Date.now() }, { merge: true }).catch(() => {});
+  beat(); hb = setInterval(beat, 25000);
+  document.addEventListener('click', () => { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); }, { once: true });
+  unST = onSnapshot(query(collection(db, 'statuses'), where('exp', '>', Date.now())), s => { ST = {}; s.forEach(d => { const x = { id: d.id, ...d.data() }; (ST[x.u] = ST[x.u] || []).push(x); }); Object.values(ST).forEach(a => a.sort((p, q) => p.t - q.t)); drawSt(); });
+  listenRing();
+  unU = onSnapshot(collection(db, 'users'), s => { U = {}; s.forEach(d => U[d.id] = d.data()); renderList(); paint(); av_(me, $('s-av')); });
+  unList = onSnapshot(query(collection(db, 'chats'), where('members', 'array-contains', me)), s => {
+    chats = {}; s.forEach(d => chats[d.id] = { id: d.id, ...d.data() });
+    renderList();
+    Object.values(chats).forEach(c => {
+      if (c.lastFrom && c.lastFrom !== me && c.lastId && !dseen.has(c.lastId)) {
+        dseen.add(c.lastId); updateDoc(doc(db, 'chats', c.id, 'messages', c.lastId), { dlv: true }).catch(() => {});
+        if (loaded && (document.hidden || !cur || cur.id !== c.id)) notify(c);
+      }
+    });
+    loaded = true;
+    if (cur && !cur.pub) clearUnread();
+  });
+});
+
+const av_ = (u, n) => { const p = U[u]; if (p && p.ph) { n.textContent = ''; n.style.backgroundImage = 'url(' + p.ph + ')'; n.style.backgroundSize = 'cover'; } else { n.style.backgroundImage = ''; n.textContent = dn(u)[0].toUpperCase(); } };
+let P = { pin: {}, arc: {}, mute: {}, blk: {}, star: {} }, showArc = false; try { P = { ...P, ...JSON.parse(localStorage.egP || '{}') }; } catch (e) {}
+const sP = () => localStorage.egP = JSON.stringify(P);
+let HID = {}; try { HID = JSON.parse(localStorage.egHid || '{}'); } catch (e) {}
+const dseen = new Set(), nseen = new Set(); let loaded = false;
+function notify(c) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const o = c.members.find(m => m !== me);
+  if (P.mute[c.id] || P.blk[o]) return;
+  navigator.serviceWorker.ready.then(r => r.showNotification(c.group ? c.gname : dn(o), { body: c.lastMsg || 'رسالة جديدة', icon: 'icon-192.png', tag: c.id })).catch(() => {});
+}
+const dn = u => (U[u] && U[u].dn) || u;
+function paint() {
+  const pb = $('pin-bar'), pn = cur && !cur.pub && (chats[cur.id] || {}).pinned; pb.style.display = pn ? 'flex' : 'none'; if (pn) pb.textContent = '📌 ' + pn.t;
+  if (cur && cur.grp) { $('c-status').textContent = ((chats[cur.id] || {}).members || []).map(dn).join('، '); return; }
+  if (!cur || cur.pub) return;
+  const p = U[cur.name] || {}, a = p.act;
+  $('c-status').textContent = a && a.chat === cur.id && Date.now() - a.t < 4000 ? (a.k === 'r' ? '🎤 يسجّل رسالة صوتية...' : '✍️ يكتب...')
+    : (Date.now() - (p.lastSeen || 0) < 60000 ? 'متصل الآن' : (p.lastSeen ? 'آخر ظهور ' + fmt(p.lastSeen) : ''));
+}
+setInterval(paint, 2000);
+let lastAct = 0;
+const act = k => { if (!cur || cur.pub) return; const n = Date.now(); if (k === 't' && n - lastAct < 2500) return; lastAct = n; setDoc(doc(db, 'users', me), { act: { chat: cur.id, k, t: n } }, { merge: true }).catch(() => {}); };
+
+/* ---------- قائمة المحادثات ---------- */
+function renderList() {
+  const box = $('chats'), f = $('search').value.trim().toLowerCase();
+  box.textContent = '';
+  const items = [{ id: 'public', name: 'الدردشة العامة', last: 'غرفة الدردشة الجماعية', pub: 1, n: 0 }];
+  Object.values(chats).sort((a, b) => (b.lastTs || 0) - (a.lastTs || 0)).forEach(c => {
+    const o = c.members.find(m => m !== me) || me; items.push({ id: c.id, name: c.group ? c.id : o, title: c.group ? c.gname : dn(o), grp: c.group, last: c.lastMsg || 'ابدأ المحادثة', ts: c.lastTs, n: (c.unread || {})[me] || 0 });
+  });
+  items.sort((a, b) => (P.pin[b.id] ? 1 : 0) - (P.pin[a.id] ? 1 : 0)).filter(i => (!f || (i.title || i.name).toLowerCase().includes(f)) && (showArc ? P.arc[i.id] : !P.arc[i.id])).forEach(i => {
+    const r = el('div', 'chat-item'), av = el('div', 'avatar');
+    if (i.pub || i.grp) { av.style.background = '#00a884'; av.innerHTML = '<i class="fa-solid fa-users"></i>'; }
+    else av_(i.name, av);
+    const info = el('div', 'chat-info'), top = el('div', 'chat-top'), bot = el('div', 'chat-top');
+    top.append(el('span', 'chat-name', (P.pin[i.id] ? '📌 ' : '') + (P.mute[i.id] ? '🔇 ' : '') + (i.title || i.name)), el('span', 'chat-time' + (i.n ? ' on' : ''), i.ts ? fmt(i.ts) : ''));
+    bot.append(el('div', 'last-msg', i.last));
+    if (i.n) bot.append(el('span', 'badge', i.n));
+    info.append(top, bot); r.append(av, info);
+    r.onclick = () => openChat(i);
+    box.append(r);
+  });
+  if (showArc || Object.keys(P.arc).length) { const r = el('div', 'chat-item'); r.append(el('div', 'last-msg', showArc ? '⬅️ رجوع للمحادثات' : '📦 المؤرشف (' + Object.keys(P.arc).length + ')')); r.onclick = () => { showArc = !showArc; renderList(); }; box.append(r); }
+}
+$('search').oninput = renderList;
+$('btn-search').onclick = () => { const s = $('search'); s.style.display = s.style.display === 'block' ? 'none' : 'block'; if (s.style.display === 'none') { s.value = ''; renderList(); } else s.focus(); };
+
+/* ---------- إضافة جهة اتصال ---------- */
+$('btn-add').onclick = () => $('add-modal').style.display = 'flex';
+$('btn-cancel').onclick = () => $('add-modal').style.display = 'none';
+$('btn-save').onclick = async () => {
+  const t = $('target').value.trim().toLowerCase();
+  if (!t || t === me) return alert('اكتب يوزر تاني صحيح');
+  try {
+    const s = await getDoc(doc(db, 'users', t));
+    if (!s.exists()) return alert('اليوزر ده مش مسجّل في التطبيق');
+    const id = cid(me, t);
+    await setDoc(doc(db, 'chats', id), { members: [me, t].sort() }, { merge: true });
+    $('add-modal').style.display = 'none'; $('target').value = '';
+    openChat({ id, name: t });
+  } catch (e) { alert('حصل خطأ: ' + e.code); }
+};
+
+/* ---------- المحادثة ---------- */
+function openChat(i) {
+  closeChat(); cur = i; replyTo = null; $('reply-bar').style.display = 'none';
+  $('c-name').textContent = i.title || dn(i.name);
+  if (i.pub || i.grp) { $('c-av').textContent = 'G'; $('c-av').style.backgroundImage = ''; } else av_(i.name, $('c-av'));
+  $('c-status').textContent = i.pub ? 'غرفة عامة' : '';
+  $('chat-room').classList.add('active');
+  $('btn-voice').style.display = $('btn-vid').style.display = (i.pub || i.grp) ? 'none' : 'inline-block';
+  paint();
+  unMsgs = onSnapshot(query(collection(db, 'chats', i.id, 'messages'), orderBy('ts', 'desc'), limit(100)), s => {
+    const arr = []; s.forEach(d => arr.push({ id: d.id, ...d.data() }));
+    renderMsgs(arr.reverse());
+  });
+  clearUnread();
+}
+function closeChat() {
+  unMsgs && unMsgs(); unPeer && unPeer(); unMsgs = unPeer = null; cur = null;
+  $('chat-room').classList.remove('active'); $('emojis').style.display = 'none';
+}
+$('btn-back').onclick = closeChat;
+
+function clearUnread() {
+  if (cur && !cur.pub && ((chats[cur.id] || {}).unread || {})[me])
+    updateDoc(doc(db, 'chats', cur.id), { ['unread.' + me]: 0 }).catch(() => {});
+}
+
+let lastArr = [];
+function renderMsgs(arr) {
+  lastArr = arr;
+  const b = $('chat-body'); b.textContent = '';
+  let day = '', hasNew = false;
+  arr.forEach(m => {
+    if (HID[m.id] || P.blk[m.from] || (m.exp && m.exp < Date.now())) { if (m.exp && m.exp < Date.now() && m.from === me) deleteDoc(doc(db, 'chats', cur.id, 'messages', m.id)).catch(() => {}); return; }
+    const d = new Date(m.ts).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long' });
+    if (d !== day) { day = d; b.append(el('div', 'day', d)); }
+    const mine = m.from === me;
+    if (!mine && !cur.pub && !m.read && !m.del) {
+      updateDoc(doc(db, 'chats', cur.id, 'messages', m.id), { read: true }).catch(() => {}); hasNew = true;
+    }
+    const bub = el('div', 'bubble ' + (mine ? 'me' : 'other'));
+    if (!mine && (cur.pub || cur.grp)) bub.append(el('div', 'sender', dn(m.from)));
+    if (m.fwd) bub.append(el('i', 'del', '↪️ محوّلة'));
+    if (m.reply) { const q = el('div', 'quote'); q.append(el('b', '', m.reply.name), el('div', '', m.reply.text)); bub.append(q); }
+    if (m.del) bub.append(el('i', 'del', '🚫 تم حذف هذه الرسالة'));
+    else {
+      if (m.img) { const im = el('img'); im.src = m.img; im.onclick = e => { e.stopPropagation(); window.open(m.img); }; bub.append(im); }
+      if (m.aud) { const a = el('audio'); a.controls = true; a.src = m.aud; a.onclick = e => e.stopPropagation(); bub.append(a); }
+      if (m.file) { const a = el('a', '', '📄 ' + m.file.n); a.href = m.file.u; a.download = m.file.n; a.style.cssText = 'color:#53bdeb;display:block'; a.onclick = e => e.stopPropagation(); bub.append(a); }
+      if (m.text) { if (m.text.startsWith('📍 http')) { const a = el('a', '', m.text); a.href = m.text.slice(2); a.target = '_blank'; a.style.color = '#53bdeb'; a.onclick = e => e.stopPropagation(); bub.append(a); } else bub.append(el('div', '', m.text)); }
+    }
+    const tick = mine && !cur.pub && !m.del ? (m.read || m.dlv ? ' ✓✓' : ' ✓') : '';
+    bub.append(el('span', 'time' + (m.read && tick ? ' read' : ''), (P.star[m.id] ? '⭐ ' : '') + (m.edited ? 'معدّلة · ' : '') + fmt(m.ts) + tick));
+    if (m.rx) { const v = Object.values(m.rx); if (v.length) bub.append(el('div', 'rxs', [...new Set(v)].join('') + (v.length > 1 ? ' ' + v.length : ''))); }
+    if (!m.del) bub.onclick = e => showMenu(e, m, mine);
+    b.append(bub);
+  });
+  b.scrollTop = b.scrollHeight;
+  if (hasNew) clearUnread();
+}
+
+/* قائمة الرسالة: رد / نسخ / حذف */
+function showMenu(e, m, mine) {
+  e.stopPropagation();
+  const M = $('menu'); M.textContent = '';
+  const mref = () => doc(db, 'chats', cur.id, 'messages', m.id);
+  const rx = el('div', 'rx');
+  ['👍', '❤️', '😂', '😮', '😢', '🙏'].forEach(x => { const t = el('span', '', x); t.onclick = () => { M.style.display = 'none'; updateDoc(mref(), { ['rx.' + me]: m.rx && m.rx[me] === x ? deleteField() : x }).catch(() => {}); }; rx.append(t); });
+  M.append(rx);
+  const add = (t, f) => { const x = el('div', '', t); x.onclick = () => { M.style.display = 'none'; f(); }; M.append(x); };
+  add('↩️ رد', () => {
+    replyTo = { name: m.from, text: m.text ? m.text.slice(0, 60) : (m.aud ? '🎤 صوت' : '📷 صورة') };
+    $('reply-txt').textContent = dn(replyTo.name) + ': ' + replyTo.text;
+    $('reply-bar').style.display = 'flex'; $('msg-input').focus();
+  });
+  if (m.text) add('📋 نسخ', () => navigator.clipboard && navigator.clipboard.writeText(m.text));
+  if (mine && m.text && !m.img && !m.aud) add('✏️ تعديل', () => { const n = prompt('عدّل الرسالة', m.text); if (n && n.trim() && n.trim() !== m.text) updateDoc(mref(), { text: n.trim(), edited: true }); });
+  add('↪️ تحويل', () => forward(m));
+  add(P.star[m.id] ? '⭐ إلغاء التمييز' : '⭐ تمييز', () => { if (P.star[m.id]) delete P.star[m.id]; else P.star[m.id] = { t: (m.text || '[وسائط]').slice(0, 60), c: $('c-name').textContent }; sP(); renderMsgs(lastArr); });
+  if (!cur.pub) add('📌 تثبيت في المحادثة', () => updateDoc(doc(db, 'chats', cur.id), { pinned: { t: (m.text || '[وسائط]').slice(0, 60) } }));
+  add('🙈 حذف عندي', () => { HID[m.id] = 1; localStorage.egHid = JSON.stringify(HID); renderMsgs(lastArr); });
+  if (mine) add('🗑️ حذف للجميع', () => updateDoc(mref(), { del: true, text: '', img: null, aud: null }));
+  M.style.display = 'block';
+  const r = $('chat-room').getBoundingClientRect();
+  M.style.top = Math.max(8, Math.min(e.clientY - r.top, r.height - 260)) + 'px';
+  M.style.left = Math.max(8, Math.min(e.clientX - r.left, r.width - 210)) + 'px';
+}
+document.addEventListener('click', () => $('menu').style.display = 'none');
+$('reply-x').onclick = () => { replyTo = null; $('reply-bar').style.display = 'none'; };
+
+/* ---------- الإرسال ---------- */
+async function send(text, img, aud, T = cur, extra = {}) {
+  if (!text && !img && !aud && !extra.file) return;
+  const ref = doc(collection(db, 'chats', T.id, 'messages'));
+  const msg = { from: me, text, ts: Date.now(), read: false };
+  if (img) msg.img = img;
+  if (aud) msg.aud = aud;
+  if (replyTo) msg.reply = replyTo;
+  const dis = (chats[T.id] || {}).dis || 0; if (dis) msg.exp = msg.ts + dis * 1000;
+  Object.assign(msg, extra);
+  replyTo = null; $('reply-bar').style.display = 'none';
+  try {
+    if (!T.pub) {
+      const o = T.name, G = chats[T.id] && chats[T.id].group, gm = G ? chats[T.id].members : [me, o].sort(), un = {}; gm.filter(x => x !== me).forEach(x => un[x] = increment(1));
+      await setDoc(doc(db, 'chats', T.id), {
+        members: gm, lastMsg: text || (aud ? '🎤 رسالة صوتية' : extra.file ? '📄 ملف' : '📷 صورة'), lastTs: msg.ts, lastFrom: me, lastId: ref.id,
+        unread: un
+      }, { merge: true });
+    }
+    await setDoc(ref, msg);
+  } catch (e) { alert('فشل الإرسال: ' + e.code); }
+}
+const sendTxt = () => { const i = $('msg-input'), t = i.value.trim(); i.value = ''; send(t); };
+$('btn-send').onclick = sendTxt;
+$('msg-input').oninput = () => act('t');
+$('msg-input').onkeydown = e => { if (e.key === 'Enter') sendTxt(); };
+
+/* صور: تتضغط وتتخزن مع الرسالة */
+$('btn-attach').onclick = e => popup(e, [['🖼️ صورة', () => $('file').click()], ['📄 ملف', () => $('docf').click()], ['📍 موقعي', () => navigator.geolocation.getCurrentPosition(p => send('📍 https://maps.google.com/?q=' + p.coords.latitude + ',' + p.coords.longitude), () => alert('اسمح بالوصول للموقع'))]]);
+const pic = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      const k = Math.min(1, 800 / Math.max(im.width, im.height)), c = document.createElement('canvas');
+      c.width = im.width * k; c.height = im.height * k;
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      const t = $('msg-input').value.trim(); $('msg-input').value = '';
+      send(t, c.toDataURL('image/jpeg', .6));
+    };
+    im.src = r.result;
+  };
+  r.readAsDataURL(f); e.target.value = '';
+};
+$('file').onchange = pic; $('cam').onchange = pic;
+$('btn-cam').onclick = () => $('cam').click();
+
+/* إيموجي */
+'😀 😂 😍 😘 😎 🤔 😢 😡 👍 👎 🙏 👏 🔥 ❤️ 🎉 😴 🤣 😅 😉 🥰 💪 🙌 😭 ✅'.split(' ').forEach(x => {
+  const s = el('span', '', x); s.onclick = () => { $('msg-input').value += x; $('msg-input').focus(); }; $('emojis').append(s);
+});
+$('btn-emoji').onclick = () => { const p = $('emojis'); p.style.display = p.style.display === 'flex' ? 'none' : 'flex'; };
+
+/* رسالة صوتية: اضغط للتسجيل واضغط تاني للإرسال (حد أقصى دقيقة) */
+let mr = null, chunks = [], rtimer = null;
+$('btn-mic').onclick = async () => {
+  if (mr) { mr.stop(); return; }
+  try {
+    const st = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mr = new MediaRecorder(st, { audioBitsPerSecond: 24000 }); chunks = [];
+    mr.ondataavailable = e => chunks.push(e.data);
+    mr.onstop = () => {
+      clearInterval(rtimer); st.getTracks().forEach(t => t.stop()); $('btn-mic').classList.remove('rec');
+      const type = mr.mimeType || 'audio/webm'; mr = null;
+      const r = new FileReader(); r.onload = () => send('', null, r.result); r.readAsDataURL(new Blob(chunks, { type }));
+    };
+    mr.start(); $('btn-mic').classList.add('rec'); act('r'); rtimer = setInterval(() => act('r'), 2500);
+    setTimeout(() => mr && mr.stop(), 60000);
+  } catch (e) { alert('مش قادر أفتح الميكروفون، اسمح بالصلاحية'); }
+};
+
+/* الإعدادات */
+$('btn-settings').onclick = () => { $('s-name-v').textContent = dn(me); $('s-ab-v').textContent = (U[me] || {}).ab || 'متاح'; av_(me, $('s-av')); show('settings-screen'); };
+$('set-back').onclick = () => show('main-screen');
+$('s-name').onclick = async () => {
+  const n = prompt('الاسم الجديد', dn(me));
+  if (n && n.trim()) { await setDoc(doc(db, 'users', me), { dn: n.trim().slice(0, 30) }, { merge: true }); $('s-name-v').textContent = n.trim(); }
+};
+$('s-out').onclick = () => { if (confirm('تسجيل الخروج؟')) signOut(auth); };
+$('s-del').onclick = async () => {
+  if (!confirm('حذف حسابك نهائياً؟')) return;
+  try { await deleteDoc(doc(db, 'users', me)); await deleteUser(auth.currentUser); }
+  catch (e) { alert(e.code === 'auth/requires-recent-login' ? 'سجّل خروج وادخل تاني وبعدين حاول' : 'خطأ: ' + e.code); }
+};
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+$('s-av').onclick = () => $('pf').click();
+$('pf').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { const im = new Image(); im.onload = () => {
+    const k = 160 / Math.min(im.width, im.height), c = document.createElement('canvas'); c.width = c.height = 160;
+    c.getContext('2d').drawImage(im, (160 - im.width * k) / 2, (160 - im.height * k) / 2, im.width * k, im.height * k);
+    setDoc(doc(db, 'users', me), { ph: c.toDataURL('image/jpeg', .7) }, { merge: true });
+  }; im.src = r.result; };
+  r.readAsDataURL(f); e.target.value = '';
+};
+$('s-about').onclick = async () => { const n = prompt('الحالة', (U[me] || {}).ab || ''); if (n !== null) { await setDoc(doc(db, 'users', me), { ab: n.trim().slice(0, 80) }, { merge: true }); $('s-ab-v').textContent = n.trim() || 'متاح'; } };
+$('s-notif').onclick = async () => { if (!('Notification' in window)) return alert('المتصفح ده مش بيدعم الإشعارات'); const p = await Notification.requestPermission(); alert(p === 'granted' ? 'الإشعارات اتفعّلت ✅' : 'الإشعارات مقفولة، فعّلها من إعدادات المتصفح'); };
+document.addEventListener('visibilitychange', () => { if (!document.hidden) disableNetwork(db).then(() => enableNetwork(db)).catch(() => {}); });
+
+function popup(e, items) {
+  e.stopPropagation();
+  const M = $('menu'); M.textContent = '';
+  items.forEach(([t, f]) => { const x = el('div', '', t); x.onclick = () => { M.style.display = 'none'; f(); }; M.append(x); });
+  M.style.display = 'block';
+  const r = $('chat-room').getBoundingClientRect();
+  M.style.top = Math.max(8, Math.min(e.clientY - r.top, r.height - 260)) + 'px';
+  M.style.left = Math.max(8, Math.min(e.clientX - r.left, r.width - 210)) + 'px';
+}
+function forward(m) {
+  const L = [{ id: 'public', name: 'الدردشة العامة', pub: 1 }, ...Object.values(chats).map(c => { const o = c.members.find(x => x !== me); return { id: c.id, name: c.group ? c.id : o, title: c.group ? c.gname : dn(o), grp: c.group }; })];
+  const n = parseInt(prompt('حوّل إلى (اكتب الرقم):\n' + L.map((x, i) => (i + 1) + '. ' + (x.title || x.name)).join('\n')), 10);
+  const t = L[n - 1]; if (!t) return;
+  send(m.text || '', m.img || null, m.aud || null, t, { fwd: 1, ...(m.file ? { file: m.file } : {}) });
+}
+$('docf').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  if (f.size > 700000) { alert('الملف أكبر من 700 كيلوبايت'); return; }
+  const r = new FileReader(); r.onload = () => send('', null, null, cur, { file: { n: f.name, u: r.result } }); r.readAsDataURL(f); e.target.value = '';
+};
+$('pin-bar').onclick = () => { if (confirm('إلغاء تثبيت الرسالة؟')) updateDoc(doc(db, 'chats', cur.id), { pinned: deleteField() }); };
+$('btn-cm').onclick = e => {
+  if (!cur) return; const id = cur.id, o = cur.name;
+  const tg = k => { if (P[k][id]) delete P[k][id]; else P[k][id] = 1; sP(); renderList(); };
+  const it = [[P.pin[id] ? 'إلغاء تثبيت المحادثة' : '📌 تثبيت المحادثة', () => tg('pin')], [P.arc[id] ? 'إلغاء الأرشفة' : '📦 أرشفة', () => tg('arc')], [P.mute[id] ? '🔔 إلغاء الكتم' : '🔇 كتم', () => tg('mute')]];
+  if (cur.grp) it.push(['➕ إضافة عضو', async () => { const u = (prompt('يوزر العضو') || '').trim().toLowerCase(); if (!u) return; const sn = await getDoc(doc(db, 'users', u)); if (!sn.exists()) return alert('اليوزر مش مسجّل'); const ms = chats[id].members; if (!ms.includes(u)) updateDoc(doc(db, 'chats', id), { members: [...ms, u] }); }],
+    ['🚪 مغادرة المجموعة', () => { if (confirm('تغادر المجموعة؟')) { updateDoc(doc(db, 'chats', id), { members: chats[id].members.filter(x => x !== me) }); closeChat(); } }]);
+  if (!cur.pub && !cur.grp) {
+    it.push([P.blk[o] ? 'إلغاء الحظر' : '🚫 حظر', () => { if (P.blk[o]) delete P.blk[o]; else P.blk[o] = 1; sP(); renderMsgs(lastArr); }]);
+    it.push(['⏳ رسائل تختفي', () => { const n = prompt('بعد كام ساعة تختفي الرسائل؟ (0 = إيقاف)', ((chats[id] || {}).dis || 0) / 3600); if (n !== null) updateDoc(doc(db, 'chats', id), { dis: Math.max(0, Number(n) || 0) * 3600 }); }]);
+  }
+  it.push(['🎨 خلفية المحادثة', wp]); popup(e, it);
+};
+const WP = ['', '#0b141a', '#1b2a1f', '#1c2433', '#2b1d2e', 'linear-gradient(#0b141a,#173f3a)'];
+function applyWp() { $('chat-body').style.background = WP[+localStorage.egWp || 0]; }
+function wp() { const n = parseInt(prompt('اختار خلفية: 0 الأصلية، 1 غامق، 2 أخضر، 3 أزرق، 4 بنفسجي، 5 تدرّج'), 10); if (n >= 0 && n < WP.length) { localStorage.egWp = n; applyWp(); } }
+const applyTh = () => document.body.classList.toggle('light', localStorage.egTh === 'l');
+$('s-theme').onclick = () => { localStorage.egTh = localStorage.egTh === 'l' ? 'd' : 'l'; applyTh(); };
+$('s-wp').onclick = wp;
+$('s-star').onclick = () => alert(Object.values(P.star).map(x => '⭐ ' + x.c + ': ' + x.t).join('\n') || 'مفيش رسائل مميّزة');
+applyWp(); applyTh();
+
+/* ---------- مجموعة جديدة ---------- */
+$('btn-group').onclick = async () => {
+  const n = prompt('اسم المجموعة'); if (!n) return;
+  const ms = (prompt('يوزرات الأعضاء مفصولة بفاصلة') || '').split(/[,،\s]+/).map(x => x.trim().toLowerCase()).filter(x => x && x !== me);
+  const ok = []; for (const m of ms) { const sn = await getDoc(doc(db, 'users', m)); if (sn.exists()) ok.push(m); }
+  if (!ok.length) return alert('ما لقيتش أعضاء مسجّلين');
+  const id = 'g_' + Date.now().toString(36);
+  await setDoc(doc(db, 'chats', id), { members: [me, ...ok], group: true, gname: n.slice(0, 40), admin: [me], lastMsg: 'تم إنشاء المجموعة', lastTs: Date.now(), lastFrom: me });
+  $('add-modal').style.display = 'none'; openChat({ id, name: id, title: n.slice(0, 40), grp: 1 });
+};
+
+/* ---------- الحالات ---------- */
+let ST = {};
+const shrink = (f, max, cb) => { const r = new FileReader(); r.onload = () => { const im = new Image(); im.onload = () => { const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = im.width * k; c.height = im.height * k; c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); cb(c.toDataURL('image/jpeg', .6)); }; im.src = r.result; }; r.readAsDataURL(f); };
+function drawSt() {
+  const b = $('st-list'); b.textContent = '';
+  Object.keys(ST).filter(u => !P.blk[u]).sort((a, b2) => (a === me ? -1 : b2 === me ? 1 : ST[b2][ST[b2].length - 1].t - ST[a][ST[a].length - 1].t)).forEach(u => {
+    const r = el('div', 'row'); r.append(el('span', '', (u === me ? 'حالتي' : dn(u)) + ' (' + ST[u].length + ')'), el('small', '', fmt(ST[u][ST[u].length - 1].t)));
+    r.onclick = () => viewSt(u); b.append(r);
+  });
+}
+function viewSt(u) {
+  const a = ST[u] || []; let i = 0; const V = $('st-view');
+  const go = () => {
+    if (i >= a.length) { V.style.display = 'none'; return; }
+    const x = a[i++]; V.textContent = ''; V.style.background = x.bg || '#000';
+    const h = el('div', '', dn(u) + ' · ' + fmt(x.t)); h.style.cssText = 'position:absolute;top:14px;right:16px;color:#fff;font-size:14px'; V.append(h);
+    if (x.img) { const im = el('img'); im.src = x.img; im.style.cssText = 'max-width:100%;max-height:85%'; V.append(im); }
+    if (x.text) { const t = el('div', '', x.text); t.style.cssText = 'font-size:26px;padding:24px;text-align:center;color:#fff'; V.append(t); }
+    if (u === me) { const d = el('button', 'btn', '🗑️ حذف'); d.style.cssText = 'position:absolute;bottom:20px;width:120px;background:#f15c6d'; d.onclick = ev => { ev.stopPropagation(); deleteDoc(doc(db, 'statuses', x.id)); V.style.display = 'none'; }; V.append(d); }
+  };
+  V.style.display = 'flex'; V.onclick = go; go();
+}
+$('btn-status').onclick = () => { drawSt(); show('status-screen'); };
+$('st-back').onclick = () => show('main-screen');
+$('st-add').onclick = () => {
+  if (confirm('تضيف صورة؟ (إلغاء = حالة نصية)')) $('stf').click();
+  else { const t = prompt('اكتب الحالة'); if (t && t.trim()) { const n = Date.now(); addDoc(collection(db, 'statuses'), { u: me, t: n, exp: n + 864e5, text: t.trim().slice(0, 200), bg: ['#075e54', '#6a1b9a', '#1565c0', '#c62828', '#ef6c00'][n % 5] }); } }
+};
+$('stf').onchange = e => { const f = e.target.files[0]; if (!f) return; shrink(f, 800, d => { const n = Date.now(); addDoc(collection(db, 'statuses'), { u: me, t: n, exp: n + 864e5, img: d }); }); e.target.value = ''; };
+
+/* ---------- المكالمات (WebRTC + Firestore) ---------- */
+const ICE = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+let pc = null, lstream = null, callRef = null, unCall = [], incoming = null;
+function callUI(t, mode) {
+  $('call-view').style.display = 'flex'; $('call-t').textContent = t;
+  $('call-acc').style.display = mode === 'in' ? 'inline-block' : 'none';
+  $('call-mute').style.display = $('call-cam').style.display = mode === 'in' ? 'none' : 'inline-block';
+}
+async function setupPc(video) {
+  lstream = await navigator.mediaDevices.getUserMedia({ audio: true, video: !!video });
+  pc = new RTCPeerConnection(ICE);
+  lstream.getTracks().forEach(t => pc.addTrack(t, lstream));
+  pc.ontrack = e => { $('call-rv').srcObject = e.streams[0]; };
+  $('call-lv').srcObject = lstream; $('call-lv').style.display = video ? 'block' : 'none';
+  pc.onicecandidate = e => e.candidate && addDoc(collection(callRef, 'cands'), { from: me, c: JSON.stringify(e.candidate) });
+}
+function listenCands() {
+  unCall.push(onSnapshot(collection(callRef, 'cands'), s => s.docChanges().forEach(ch => {
+    if (ch.type === 'added' && ch.doc.data().from !== me) pc.addIceCandidate(JSON.parse(ch.doc.data().c)).catch(() => {});
+  })));
+}
+async function startCall(video) {
+  if (!cur || cur.pub || cur.grp || pc) return;
+  try {
+    callRef = doc(collection(db, 'calls')); await setupPc(video);
+    const off = await pc.createOffer(); await pc.setLocalDescription(off);
+    await setDoc(callRef, { from: me, to: cur.name, video: !!video, offer: { type: off.type, sdp: off.sdp }, state: 'ring', t: Date.now() });
+    callUI('📞 بيرن على ' + dn(cur.name) + '...', 'out'); ring(true);
+    unCall.push(onSnapshot(callRef, async s => {
+      const d = s.data(); if (!d) return;
+      if (d.state === 'ended') return endCall(false);
+      if (d.answer && pc && !pc.currentRemoteDescription) { ring(false); await pc.setRemoteDescription(d.answer); listenCands(); $('call-t').textContent = '🟢 متصل'; }
+    }));
+    setTimeout(() => { if (pc && !pc.currentRemoteDescription) endCall(true); }, 45000);
+  } catch (e) { alert('فشل بدء المكالمة، اسمح بالميكروفون والكاميرا'); endCall(true); }
+}
+function listenRing() {
+  unRing = onSnapshot(query(collection(db, 'calls'), where('to', '==', me), where('state', '==', 'ring')), s => s.docChanges().forEach(ch => {
+    if (ch.type !== 'added') return;
+    const d = ch.doc.data(); if (Date.now() - d.t > 45000 || pc || P.blk[d.from]) return;
+    incoming = { ref: ch.doc.ref, d };
+    callUI('📞 ' + dn(d.from) + (d.video ? ' (فيديو)' : ' (صوت)') + ' بيتصل بيك', 'in'); ring(true);
+    if (document.hidden && 'Notification' in window && Notification.permission === 'granted') navigator.serviceWorker.ready.then(r => r.showNotification('📞 مكالمة واردة', { body: dn(d.from), icon: 'icon-192.png', tag: 'call', requireInteraction: true, vibrate: [400, 200, 400, 200, 400] })).catch(() => {});
+  }));
+}
+$('call-acc').onclick = async () => {
+  ring(false); const { ref, d } = incoming; callRef = ref;
+  try {
+    await setupPc(d.video); await pc.setRemoteDescription(d.offer); listenCands();
+    const ans = await pc.createAnswer(); await pc.setLocalDescription(ans);
+    await updateDoc(ref, { answer: { type: ans.type, sdp: ans.sdp }, state: 'active' });
+    callUI('🟢 متصل', 'live'); incoming = null;
+    unCall.push(onSnapshot(ref, s => { const x = s.data(); if (x && x.state === 'ended') endCall(false); }));
+  } catch (e) { alert('فشل الرد على المكالمة'); endCall(true); }
+};
+function endCall(send) {
+  ring(false);
+  if (send) { const r = callRef || (incoming && incoming.ref); r && updateDoc(r, { state: 'ended' }).catch(() => {}); }
+  unCall.forEach(u => u()); unCall = [];
+  pc && pc.close(); pc = null; lstream && lstream.getTracks().forEach(t => t.stop()); lstream = null;
+  callRef = null; incoming = null; $('call-rv').srcObject = null; $('call-view').style.display = 'none';
+}
+$('call-end').onclick = () => endCall(true);
+$('call-mute').onclick = () => { const t = lstream && lstream.getAudioTracks()[0]; if (t) { t.enabled = !t.enabled; $('call-mute').textContent = t.enabled ? '🎤' : '🔇'; } };
+$('call-cam').onclick = () => { const t = lstream && lstream.getVideoTracks()[0]; if (t) t.enabled = !t.enabled; };
+$('btn-voice').onclick = () => startCall(false);
+$('btn-vid').onclick = () => startCall(true);
+
+/* ---------- نغمة الرنين ---------- */
+let AC = null, ringT = null;
+const unlockAudio = () => { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); };
+['click', 'touchstart'].forEach(ev => document.addEventListener(ev, unlockAudio));
+function ring(on) {
+  clearInterval(ringT); ringT = null; if (navigator.vibrate) navigator.vibrate(0);
+  if (!on) return;
+  const beep = () => {
+    if (AC) [0, .5].forEach((d, i) => {
+      const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + d;
+      o.frequency.value = i ? 480 : 440; o.connect(g); g.connect(AC.destination);
+      g.gain.setValueAtTime(.3, t); g.gain.setValueAtTime(0, t + .4); o.start(t); o.stop(t + .45);
+    });
+    if (navigator.vibrate) navigator.vibrate([400, 200, 400]);
+  };
+  beep(); ringT = setInterval(beep, 2500);
+}
+</script>
+</body>
+</html>
